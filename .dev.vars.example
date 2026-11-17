@@ -1,0 +1,2 @@
+GITHUB_WEBHOOK_SECRET=change-me
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/ID/TOKEN
