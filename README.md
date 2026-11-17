@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/banner.png" alt="hookline: open source GitHub notifications for Discord. Example cards for a merged pull request, a push, a failed CI run, a release, a force push and an approved review." width="100%"></p>
+
 # Hookline
 
 GitHub notifications for Discord that look good.
