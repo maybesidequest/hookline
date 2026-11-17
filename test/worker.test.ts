@@ -28,7 +28,7 @@ describe("worker", () => {
     const res = await worker.fetch(await req("/releases", star, "watch"), env as any);
     expect(res.status).toBe(200);
     const [url, init] = f.mock.calls[0] as [URL, RequestInit];
-    expect(String(url)).toBe("https://discord.com/api/webhooks/2/b?with_components=true");
+    expect(String(url)).toBe("https://discord.com/api/webhooks/2/b?with_components=true&wait=true");
     const msg = JSON.parse(init.body as string);
     expect(msg.flags).toBe(32768);
     expect(msg.allowed_mentions).toEqual({ parse: [] });

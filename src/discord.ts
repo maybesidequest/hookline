@@ -21,7 +21,7 @@ const MAX_BUTTON_LABEL = 80;
 const MAX_RETRY_AFTER_SECONDS = 5;
 const HTTP_TOO_MANY_REQUESTS = 429;
 
-export type DiscordMessage = RESTPostAPIWebhookWithTokenJSONBody & { components: [APIContainerComponent] };
+export type DiscordMessage = RESTPostAPIWebhookWithTokenJSONBody & { components: APIContainerComponent[] };
 
 const textDisplay = (content: string): APITextDisplayComponent => ({ type: ComponentType.TextDisplay, content });
 
@@ -49,9 +49,11 @@ function fitToBudget(pieces: string[], budget: number): string[] {
   return fitted;
 }
 
-function bodyBlocks(card: Card): APIComponentInContainer[] {
+const textLength = (card: Card) => [...card.head, ...card.body].join("\n").length;
+
+function bodyBlocks(card: Card, budget: number): APIComponentInContainer[] {
   const used = card.head.join("\n").length + TEXT_SAFETY_MARGIN;
-  const body = fitToBudget(card.body, TEXT_LIMIT - used).map(textDisplay);
+  const body = fitToBudget(card.body, budget - used).map(textDisplay);
   const gallery = card.gallery.slice(0, MAX_GALLERY_ITEMS);
   if (!body.length && !gallery.length) return [];
   const blocks: APIComponentInContainer[] = [
@@ -79,45 +81,63 @@ function buttonRow(card: Card): APIActionRowComponent<APIButtonComponentWithURL>
   ];
 }
 
-export function toDiscordMessage(card: Card): DiscordMessage {
+function container(card: Card, budget: number): APIContainerComponent {
+  return {
+    type: ComponentType.Container,
+    accent_color: Accent[card.accent],
+    components: [...headerBlocks(card), ...bodyBlocks(card, budget), ...buttonRow(card)],
+  };
+}
+
+export function toDiscordMessage(...cards: Card[]): DiscordMessage {
+  const total = cards.reduce((sum, card) => sum + textLength(card), 0);
   return {
     flags: MessageFlags.IsComponentsV2,
     allowed_mentions: { parse: [] },
-    components: [
-      {
-        type: ComponentType.Container,
-        accent_color: Accent[card.accent],
-        components: [...headerBlocks(card), ...bodyBlocks(card), ...buttonRow(card)],
-      },
-    ],
+    components: cards.map((card) => container(card, TEXT_LIMIT - (total - textLength(card)))),
   };
 }
 
 type Fetcher = (input: URL, init: RequestInit) => Promise<Response>;
 
 export class DiscordWebhook {
-  private readonly url: URL;
+  private readonly base: URL;
 
   constructor(
     webhookUrl: string,
     private readonly fetcher: Fetcher = (input, init) => fetch(input, init),
   ) {
-    this.url = new URL(webhookUrl);
-    this.url.searchParams.set("with_components", "true");
+    this.base = new URL(webhookUrl);
   }
 
-  async send(message: DiscordMessage): Promise<Response> {
-    const res = await this.post(message);
+  send(message: DiscordMessage): Promise<Response> {
+    return this.request("POST", this.endpoint("", { wait: "true" }), message);
+  }
+
+  edit(messageId: string, message: DiscordMessage): Promise<Response> {
+    return this.request("PATCH", this.endpoint(`/messages/${encodeURIComponent(messageId)}`), message);
+  }
+
+  private endpoint(path: string, params: Record<string, string> = {}): URL {
+    const url = new URL(this.base);
+    url.pathname += path;
+    url.searchParams.set("with_components", "true");
+    for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+    return url;
+  }
+
+  private async request(method: string, url: URL, message: DiscordMessage): Promise<Response> {
+    const res = await this.attempt(method, url, message);
     if (res.status !== HTTP_TOO_MANY_REQUESTS) return res;
     const wait = await this.retryAfter(res);
     if (wait > MAX_RETRY_AFTER_SECONDS) return res;
     await new Promise((resolve) => setTimeout(resolve, wait * 1000));
-    return this.post(message);
+    return this.attempt(method, url, message);
   }
 
-  private post(message: DiscordMessage): Promise<Response> {
-    return this.fetcher(this.url, {
-      method: "POST",
+  private attempt(method: string, url: URL, message: DiscordMessage): Promise<Response> {
+    return this.fetcher(url, {
+      method,
       headers: { "content-type": "application/json" },
       body: JSON.stringify(message),
     });

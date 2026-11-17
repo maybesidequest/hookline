@@ -1,16 +1,14 @@
 import type { DeploymentStatusEvent, WorkflowRunEvent } from "@octokit/webhooks-types";
 import { CardBuilder, type Card } from "../card";
 import { code, duration, esc, firstLine, link, shortSha, truncate, who } from "../md";
+import { isFailure } from "../ci/panel";
 import { byAction, type Renderer } from "./types";
 
 type WorkflowRun = WorkflowRunEvent["workflow_run"];
 
-const FAILED_CONCLUSIONS = new Set(["failure", "timed_out", "startup_failure"]);
 const SUCCESS = "success";
 const COMMIT_MESSAGE_LENGTH = 90;
 const DESCRIPTION_LENGTH = 140;
-
-const isFailure = (conclusion: string | null | undefined) => FAILED_CONCLUSIONS.has(conclusion ?? "");
 
 class CiHistory {
   constructor(private readonly kv: KVNamespace | undefined) {}

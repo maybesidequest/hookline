@@ -6,7 +6,15 @@
   "observability": { "enabled": true },
   "workers_dev": true,
   "preview_urls": false,
+  "durable_objects": {
+    "bindings": [{ "name": "PUSH_TRACKER", "class_name": "PushTracker" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PushTracker"] }],
   "vars": {
-    "EVENTS": ""
+    "EVENTS": "",
+    "EMOJI_PASS": "<:hl_pass:1572190418085347418>",
+    "EMOJI_FAIL": "<:hl_fail:1572190400230330480>",
+    "EMOJI_RUNNING": "<a:hl_running:1572190342944526336>",
+    "EMOJI_SKIP": "<:hl_skip:1572190378310897694>"
   }
 }

@@ -73,6 +73,21 @@ Then add the binding it prints to `wrangler.jsonc`:
 "kv_namespaces": [{ "binding": "HOOKLINE_STATE", "id": "<id>" }]
 ```
 
+### Live CI on pushes
+
+Each push card gets a second panel underneath that shows its GitHub Actions runs. Hookline edits the message as runs start and finish, so the panel turns amber while checks run, red if one fails, and green when they all pass. A Durable Object, `PushTracker`, keeps track of each push for 24 hours. It's already set up in `wrangler.jsonc`, and the free plan covers it.
+
+The panel uses colored circles out of the box. For the nicer icons, upload the four images in [`assets/emoji`](assets/emoji) as emoji in the Discord server the webhook posts to. Then type `\:hl_pass:` in Discord to get its full code, such as `<:hl_pass:123456789>` (the animated one starts with `<a:`), and set each one:
+
+| Variable | Image |
+| --- | --- |
+| `EMOJI_PASS` | `hl_pass.png` |
+| `EMOJI_FAIL` | `hl_fail.png` |
+| `EMOJI_RUNNING` | `hl_running.gif` |
+| `EMOJI_SKIP` | `hl_skip.png` |
+
+Add them under `vars` in `wrangler.jsonc`. Runs for a push that Hookline didn't track, such as ones that were already running before you deployed, fall back to the normal failure card.
+
 ## Supported events
 
 | GitHub event | Posted for |
@@ -85,7 +100,7 @@ Then add the binding it prints to `wrangler.jsonc`:
 | `issues` | opened, closed (completed, not planned, duplicate), reopened |
 | `issue_comment` | new comments on issues and pull requests |
 | `release` | published releases and pre-releases, with images from the release notes |
-| `workflow_run` | failures, and the first success after a failure |
+| `workflow_run` | live status on the push card; otherwise failures, and the first success after a failure |
 | `deployment_status` | successful and failed deployments |
 | `watch`, `fork` | new stars and forks |
 | `discussion` | new and answered discussions |
@@ -93,7 +108,7 @@ Then add the binding it prints to `wrangler.jsonc`:
 
 New line comments in a review aren't posted on their own, because GitHub sends them together with the review, which already gets a card.
 
-Hookline's replies show up in GitHub's **Recent Deliveries**: `200 Posted.`, `202 Skipped: …` for events it ignores, or `502` with Discord's error message.
+Hookline's replies show up in GitHub's **Recent Deliveries**: `200 Posted.`, `200 Updated the CI panel.`, `202 Skipped: …` for events it ignores, or `502` with Discord's error message.
 
 ## Security
 
